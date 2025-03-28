@@ -116,7 +116,7 @@ vec3 round(vec3 p) {
 }
 
 vec4 getScene(vec3 p0) {
-    // p = rotateX(p, sin(p.y * 0.5));
+    p0 = rotateX(p0, sin(p0.y * 0.5));
     vec3 id0 = round(p0/2.1);
     vec3 p = p0 - 2.1*id0;
     vec3 id = mod(id0, 3.0) / 3.0;
@@ -171,8 +171,7 @@ vec3 getNormal(in vec3 pos) {
     getScene(pos+eps.yyx).w - getScene(pos-eps.yyx).w ));
 }
 
-vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d )
-{
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
     return a + b*cos( 6.28318*(c*t+d) );
 }
 
@@ -188,16 +187,29 @@ struct Hit {
 void main() {
     vec2 st = coord(gl_FragCoord.xy);
 
-    float T = u_time * 0.1 + 16.1;
+    float T = mod(u_time * 1., 20.0);
 
-    vec3 camera = vec3(sin(T) + T * 5.0, - 2.63, -T * 5.0);
+    vec3 camera = vec3(0.0, 0.0, T * 1.0);
+    
+
     // rotateY(vec3(0.0, 3.0, -0.0), T);
     // camera = rotateX(camera, T);
     // camera = rotateZ(camera, T);
 
-    vec3 ray = normalize(vec3(st, 0.5+0.2*sin(T)));
-    ray = rotateY(ray, -sin(T));
-    ray = rotateX(ray, T*1.0);
+    vec3 ray = normalize(vec3(st, 0.5));
+    // ray = rotateY(ray, -sin(T));
+    ray = rotateZ(ray, T*0.1);
+
+    if (T > 15.) {
+        camera.x += 1.0;
+        ray = rotateY(ray, T*0.1);
+        ray = -ray;
+    } else if (T > 10.) {
+        camera.x += 2.0;
+    } else if (T > 5.) {
+        camera.x += 7.8;
+        ray = -ray;
+    }
 
 
     Hit hit;
@@ -219,7 +231,7 @@ void main() {
             hit.pos = p;
             hit.ao = d.g == 0.0 ? 1.0 : d.g;
             hit.m = d.b == 0.0 ? 1.0 : d.b;
-            hit.normal =-getNormal2(p * scale);
+            hit.normal = getNormal2(p * scale);
             hit.id = d.r;
             break;
         }
@@ -228,10 +240,10 @@ void main() {
     }
 
     // sky based on ray dir
-    vec3 fogColor = vec3(0.4745, 0.2353, 0.0941);
-    vec3 up = vec3(0.0, -1.0, 0.0);
+    vec3 fogColor = vec3(0.3686, 0.2, 0.102);
+    vec3 up = vec3(0.0, 1.0, 0.0);
     float sky = dot(ray, up);
-    fogColor = mix(fogColor, vec3(0.8627, 0.8118, 1.0), sky * 0.5 + 0.5);
+    fogColor = mix(fogColor, vec3(1.0, 1.0, 1.0), sky * 0.5 + 0.5);
     vec3 color = fogColor;
 
     if (hit.t != INF) {
@@ -249,7 +261,7 @@ void main() {
     }
 
     // Gamma correction
-    color = pow(color, vec3(1.0 / 1.9));
+    color = pow(color, vec3(1.0 / 1.4));
 
     gl_FragColor = vec4(color, 1.0);
 }
